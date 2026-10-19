@@ -102,19 +102,30 @@ export async function getGroupById(groupId: string): Promise<TricountGroup | nul
   return groups.find((g) => g.id === groupId) || null;
 }
 
-export async function createGroup(title: string, description: string, participantNames: string[]): Promise<TricountGroup> {
+export async function createGroup(
+  title: string,
+  description: string,
+  participantItems: Array<string | { name: string; email?: string; userId?: string }>
+): Promise<TricountGroup> {
   const groups = await getStoredGroups();
   const groupId = `grp-${Date.now()}`;
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  const participants: Participant[] = participantNames
-    .filter((n) => n.trim().length > 0)
-    .map((name, index) => ({
-      id: `part-${groupId}-${index + 1}`,
-      groupId,
-      name: name.trim(),
-      createdAt: new Date().toISOString(),
-    }));
+  const participants: Participant[] = participantItems
+    .map((item, index) => {
+      const name = typeof item === 'string' ? item.trim() : item.name.trim();
+      const email = typeof item === 'object' ? item.email : undefined;
+      const userId = typeof item === 'object' ? item.userId : undefined;
+      return {
+        id: `part-${groupId}-${index + 1}`,
+        groupId,
+        name,
+        email,
+        userId,
+        createdAt: new Date().toISOString(),
+      };
+    })
+    .filter((p) => p.name.length > 0);
 
   const newGroup: TricountGroup = {
     id: groupId,

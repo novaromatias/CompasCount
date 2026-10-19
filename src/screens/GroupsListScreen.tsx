@@ -10,12 +10,14 @@ import {
   StatusBar,
 } from 'react-native';
 import { colors } from '../theme/colors';
-import { TricountGroup } from '../types';
+import { TricountGroup, GroupInvitation } from '../types';
 import { getStoredGroups } from '../services/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../components/Avatar';
 import { useAuth } from '../context/AuthContext';
 import { LoginModal } from '../components/LoginModal';
+import { InvitationsModal } from '../components/InvitationsModal';
+import { getPendingInvitationsForEmail } from '../services/invitationService';
 
 interface GroupsListScreenProps {
   navigation: any;
@@ -24,17 +26,25 @@ interface GroupsListScreenProps {
 export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }) => {
   const { user, isGuest } = useAuth();
   const [groups, setGroups] = useState<TricountGroup[]>([]);
+  const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
+  const [isInvitationsModalVisible, setIsInvitationsModalVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       const data = await getStoredGroups();
       setGroups(data);
+      if (user?.email) {
+        const invs = await getPendingInvitationsForEmail(user.email);
+        setInvitations(invs);
+      } else {
+        setInvitations([]);
+      }
     } catch (err) {
       console.error(err);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     loadData();
@@ -146,20 +156,35 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.userBadge}
-          onPress={() => setIsLoginModalVisible(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isGuest ? 'person-circle-outline' : 'logo-google'}
-            size={16}
-            color={isGuest ? colors.primarySoft : '#4285F4'}
-          />
-          <Text style={styles.userBadgeText}>
-            {isGuest ? 'Invitado' : user?.name.split(' ')[0] || 'Conectado'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerRightActions}>
+          {invitations.length > 0 && (
+            <TouchableOpacity
+              style={styles.invitationBellBtn}
+              onPress={() => setIsInvitationsModalVisible(true)}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="notifications" size={17} color={colors.primary} />
+              <View style={styles.bellBadgeCounter}>
+                <Text style={styles.bellBadgeText}>{invitations.length}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={styles.userBadge}
+            onPress={() => setIsLoginModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isGuest ? 'person-circle-outline' : 'logo-google'}
+              size={16}
+              color={isGuest ? colors.primarySoft : '#4285F4'}
+            />
+            <Text style={styles.userBadgeText}>
+              {isGuest ? 'Invitado' : user?.name.split(' ')[0] || 'Conectado'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -225,6 +250,15 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
         visible={isLoginModalVisible}
         onClose={() => setIsLoginModalVisible(false)}
       />
+
+      {/* Modal de Invitaciones Pendientes */}
+      <InvitationsModal
+        visible={isInvitationsModalVisible}
+        invitations={invitations}
+        currentUser={user}
+        onClose={() => setIsInvitationsModalVisible(false)}
+        onRefresh={() => loadData()}
+      />
     </SafeAreaView>
   );
 };
@@ -268,6 +302,41 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: '500',
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  invitationBellBtn: {
+    position: 'relative',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorderGlow,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bellBadgeCounter: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.debtor,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: colors.background,
+  },
+  bellBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '800',
   },
   userBadge: {
     flexDirection: 'row',

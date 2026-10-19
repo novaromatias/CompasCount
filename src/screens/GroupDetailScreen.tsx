@@ -19,6 +19,8 @@ import { BalanceCard } from '../components/BalanceCard';
 import { DebtSuggestionCard } from '../components/DebtSuggestionCard';
 import { PaymentModal } from '../components/PaymentModal';
 import { RegisterPaymentModal } from '../components/RegisterPaymentModal';
+import { JoinGroupModal } from '../components/JoinGroupModal';
+import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 type TabType = 'expenses' | 'balances' | 'suggestions';
@@ -33,6 +35,10 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
 
   const [group, setGroup] = useState<TricountGroup | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
+
+  const { user } = useAuth();
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
+  const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
 
   // Modals state
   const [selectedSuggestion, setSelectedSuggestion] = useState<DebtSuggestion | null>(null);
@@ -64,12 +70,21 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
     return calculateGroupFinancials(group.participants, group.expenses, group.payments);
   }, [group]);
 
-  // Compartir enlace o código de Tricount
+  const joinLink = useMemo(() => {
+    return `http://localhost:8081/?joinGroup=${groupId}`;
+  }, [groupId]);
+
+  // Compartir o Copiar enlace de invitación
   const handleShare = async () => {
     if (!group) return;
     try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(joinLink);
+        setCopiedFeedback(true);
+        setTimeout(() => setCopiedFeedback(false), 2500);
+      }
       await Share.share({
-        message: `¡Únete a mi grupo "${group.title}" en CompasCount! Código de acceso: ${group.shareCode}`,
+        message: `¡Únete a mi grupo "${group.title}" en CompasCount!\nEnlace para entrar: ${joinLink}\nCódigo de acceso: ${group.shareCode}`,
       });
     } catch (err) {
       console.error(err);
@@ -145,9 +160,24 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={handleShare} style={styles.headerShareBtn} activeOpacity={0.75}>
-            <Ionicons name="share-social-outline" size={18} color={colors.primarySoft} />
-          </TouchableOpacity>
+          <View style={styles.headerActionsWrap}>
+            <TouchableOpacity
+              onPress={() => setIsJoinModalVisible(true)}
+              style={styles.headerTestJoinBtn}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="enter-outline" size={16} color={colors.primary} />
+              <Text style={styles.headerTestJoinText}>Unirse / Link</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleShare} style={styles.headerShareBtn} activeOpacity={0.75}>
+              <Ionicons
+                name={copiedFeedback ? 'checkmark' : 'share-social-outline'}
+                size={18}
+                color={copiedFeedback ? colors.creditor : colors.primarySoft}
+              />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -358,6 +388,17 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
         onClose={() => setIsRegisterPaymentVisible(false)}
         onSavePayment={handleSaveManualPayment}
       />
+
+      {/* Modal de Reclamación de Identidad por Link de Invitación */}
+      <JoinGroupModal
+        visible={isJoinModalVisible}
+        group={group}
+        currentUser={user}
+        onClose={() => setIsJoinModalVisible(false)}
+        onJoined={async () => {
+          await loadGroup();
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -375,6 +416,27 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.textSecondary,
     fontSize: 15,
+  },
+  headerActionsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTestJoinBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorderGlow,
+    gap: 5,
+  },
+  headerTestJoinText: {
+    color: colors.primarySoft,
+    fontSize: 12,
+    fontWeight: '700',
   },
   headerShareBtn: {
     width: 38,

@@ -10,7 +10,32 @@ export interface Participant {
   id: string;
   groupId: string;
   name: string;
+  email?: string;
   userId?: string;
+  claimedAt?: string;
+  createdAt: string;
+}
+
+export interface GroupInvitation {
+  id: string;
+  groupId: string;
+  groupTitle: string;
+  inviterName: string;
+  inviterEmail: string;
+  inviteeEmail: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  createdAt: string;
+  isRegisteredUser: boolean;
+}
+
+export interface AppPushNotification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'GROUP_INVITE' | 'EXPENSE_ADDED' | 'SYSTEM';
+  data?: Record<string, any>;
+  read: boolean;
   createdAt: string;
 }
 
