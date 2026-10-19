@@ -12,6 +12,7 @@ import {
 import { colors } from '../theme/colors';
 import { createGroup } from '../services/storage';
 import { Header } from '../components/Header';
+import { Avatar } from '../components/Avatar';
 import { Ionicons } from '@expo/vector-icons';
 
 interface CreateGroupScreenProps {
@@ -70,12 +71,14 @@ export const CreateGroupScreen: React.FC<CreateGroupScreenProps> = ({ navigation
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
-      <Header title="Nuevo CompasCount" showBack onBack={() => navigation.goBack()} />
+      <Header title="Nuevo Grupo" showBack onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* Info del Grupo */}
         <View style={styles.card}>
-          <Text style={styles.label}>Título del grupo / evento *</Text>
+          <Text style={styles.sectionHeader}>Información del grupo</Text>
+          
+          <Text style={styles.label}>Nombre del grupo o evento *</Text>
           <TextInput
             style={styles.textInput}
             value={title}
@@ -83,7 +86,7 @@ export const CreateGroupScreen: React.FC<CreateGroupScreenProps> = ({ navigation
               setTitle(t);
               setError(null);
             }}
-            placeholder="Ej: Viaje a la Costa, Asado amigos..."
+            placeholder="Ej: Viaje a la Costa, Asado del finde, Casa..."
             placeholderTextColor={colors.textMuted}
           />
 
@@ -92,16 +95,19 @@ export const CreateGroupScreen: React.FC<CreateGroupScreenProps> = ({ navigation
             style={styles.textInput}
             value={description}
             onChangeText={setDescription}
-            placeholder="Ej: Vacaciones de verano"
+            placeholder="Ej: Vacaciones 2026"
             placeholderTextColor={colors.textMuted}
           />
         </View>
 
         {/* Participantes */}
         <View style={styles.card}>
-          <Text style={styles.label}>Participantes ({participants.length})</Text>
+          <View style={styles.participantsHeaderRow}>
+            <Text style={styles.sectionHeader}>Participantes ({participants.length})</Text>
+            <Text style={styles.minRequired}>Mínimo 2</Text>
+          </View>
           <Text style={styles.hintSub}>
-            Agrega los nombres de las personas que compartirán los gastos.
+            Agrega los nombres de los amigos que compartirán las cuentas.
           </Text>
 
           {/* Input para nuevo amigo */}
@@ -113,7 +119,7 @@ export const CreateGroupScreen: React.FC<CreateGroupScreenProps> = ({ navigation
                 setNewParticipantName(t);
                 setError(null);
               }}
-              placeholder="Nombre del amigo (ej: Lucas, Ana)"
+              placeholder="Nombre del amigo (ej: Lucas, Ana, Sofi)"
               placeholderTextColor={colors.textMuted}
               onSubmitEditing={addParticipant}
             />
@@ -126,17 +132,22 @@ export const CreateGroupScreen: React.FC<CreateGroupScreenProps> = ({ navigation
           <View style={styles.chipsWrap}>
             {participants.map((name, index) => (
               <View key={index} style={styles.participantChip}>
-                <Ionicons name="person-circle" size={18} color={colors.primarySoft} />
+                <Avatar name={name} size="sm" />
                 <Text style={styles.chipText}>{name}</Text>
                 <TouchableOpacity onPress={() => removeParticipant(index)} style={styles.removeChipBtn}>
-                  <Ionicons name="close" size={16} color={colors.textMuted} />
+                  <Ionicons name="close" size={15} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
             ))}
           </View>
         </View>
 
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {error && (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={16} color={colors.debtor} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         {/* Botón Crear */}
         <TouchableOpacity
@@ -145,7 +156,7 @@ export const CreateGroupScreen: React.FC<CreateGroupScreenProps> = ({ navigation
           disabled={loading}
           activeOpacity={0.85}
         >
-          <Ionicons name="rocket-outline" size={20} color={colors.white} style={{ marginRight: 8 }} />
+          <Ionicons name="checkmark-done" size={20} color={colors.white} style={{ marginRight: 8 }} />
           <Text style={styles.createBtnText}>
             {loading ? 'Creando grupo...' : 'Crear Grupo'}
           </Text>
@@ -166,11 +177,27 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+  },
+  sectionHeader: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  participantsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  minRequired: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
   },
   label: {
     color: colors.textSecondary,
@@ -191,7 +218,7 @@ const styles = StyleSheet.create({
   hintSub: {
     color: colors.textMuted,
     fontSize: 12,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   addParticipantRow: {
     flexDirection: 'row',
@@ -208,7 +235,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 14,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
   addBtn: {
     backgroundColor: colors.primary,
@@ -227,8 +254,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingLeft: 6,
+    paddingRight: 10,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -240,25 +268,37 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   removeChipBtn: {
-    padding: 2,
+    padding: 3,
     marginLeft: 2,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.debtorSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.debtor,
+    marginBottom: 16,
+    gap: 8,
   },
   errorText: {
     color: colors.debtor,
     fontSize: 13,
-    marginBottom: 14,
-    textAlign: 'center',
+    fontWeight: '600',
+    flex: 1,
   },
   createBtn: {
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 15,
     borderRadius: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 5,
   },

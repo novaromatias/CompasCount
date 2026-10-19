@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
       <View style={styles.leftRow}>
         {showBack && (
           <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={24} color={colors.primarySoft} />
+            <Ionicons name="arrow-back" size={20} color={colors.white} />
           </TouchableOpacity>
         )}
         <View style={styles.titleContainer}>
@@ -47,8 +47,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
@@ -60,9 +60,14 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginRight: 12,
-    padding: 6,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   titleContainer: {
     flex: 1,
@@ -70,13 +75,14 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontWeight: '800',
+    letterSpacing: -0.4,
   },
   subtitle: {
     color: colors.textSecondary,
     fontSize: 12,
     marginTop: 2,
+    fontWeight: '500',
   },
   rightAction: {
     marginLeft: 12,

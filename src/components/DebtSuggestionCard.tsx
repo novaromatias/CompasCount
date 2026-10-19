@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
 import { DebtSuggestion } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from './Avatar';
 
 interface DebtSuggestionCardProps {
   suggestion: DebtSuggestion;
@@ -15,45 +16,64 @@ export const DebtSuggestionCard: React.FC<DebtSuggestionCardProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      <View style={styles.topRow}>
-        <View style={styles.participantsContainer}>
-          <View style={styles.personBadge}>
-            <Ionicons name="person-circle" size={20} color={colors.debtor} />
-            <Text style={styles.personName} numberOfLines={1}>
-              {suggestion.fromName}
-            </Text>
-          </View>
-
-          <View style={styles.arrowContainer}>
-            <Text style={styles.owesLabel}>le debe a</Text>
-            <Ionicons name="arrow-forward" size={16} color={colors.primarySoft} />
-          </View>
-
-          <View style={styles.personBadge}>
-            <Ionicons name="person-circle" size={20} color={colors.creditor} />
-            <Text style={styles.personName} numberOfLines={1}>
-              {suggestion.toName}
-            </Text>
+      {/* Transfer visual diagram */}
+      <View style={styles.transferFlow}>
+        {/* Debtor */}
+        <View style={styles.partyBox}>
+          <Avatar name={suggestion.fromName} size="md" />
+          <Text style={styles.partyName} numberOfLines={1}>
+            {suggestion.fromName}
+          </Text>
+          <View style={[styles.roleTag, { backgroundColor: colors.debtorSoft }]}>
+            <Text style={[styles.roleTagText, { color: colors.debtor }]}>Paga</Text>
           </View>
         </View>
 
-        <View style={styles.amountContainer}>
-          <Text style={styles.currencySymbol}>$</Text>
-          <Text style={styles.amountText}>
-            {suggestion.amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {/* Amount & Arrow */}
+        <View style={styles.centerArrowCol}>
+          <View style={styles.amountPill}>
+            <Text style={styles.currencySymbol}>$</Text>
+            <Text style={styles.amountText}>
+              {suggestion.amount.toLocaleString('es-AR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </Text>
+          </View>
+
+          <View style={styles.arrowLineWrap}>
+            <View style={styles.dashLine} />
+            <Ionicons name="arrow-forward" size={16} color={colors.primarySoft} />
+            <View style={styles.dashLine} />
+          </View>
+        </View>
+
+        {/* Creditor */}
+        <View style={styles.partyBox}>
+          <Avatar name={suggestion.toName} size="md" />
+          <Text style={styles.partyName} numberOfLines={1}>
+            {suggestion.toName}
           </Text>
+          <View style={[styles.roleTag, { backgroundColor: colors.creditorSoft }]}>
+            <Text style={[styles.roleTagText, { color: colors.creditor }]}>Recibe</Text>
+          </View>
         </View>
       </View>
 
+      {/* Footer with action */}
       <View style={styles.footerRow}>
-        <Text style={styles.hintText}>Sugerencia calculada para saldar con mínimo de transferencias</Text>
+        <View style={styles.hintWrap}>
+          <Ionicons name="flash-outline" size={13} color={colors.primarySoft} />
+          <Text style={styles.hintText}>Transferencia simplificada</Text>
+        </View>
+
         <TouchableOpacity
           style={styles.payButton}
           onPress={() => onPayPress(suggestion)}
           activeOpacity={0.8}
         >
-          <Ionicons name="cash-outline" size={16} color={colors.white} style={{ marginRight: 6 }} />
-          <Text style={styles.payButtonText}>Pagar</Text>
+          <Ionicons name="checkmark-circle-outline" size={16} color={colors.white} style={{ marginRight: 6 }} />
+          <Text style={styles.payButtonText}>Registrar Pago</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -63,68 +83,79 @@ export const DebtSuggestionCard: React.FC<DebtSuggestionCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     marginVertical: 6,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  topRow: {
-    marginBottom: 12,
-  },
-  participantsContainer: {
+  transferFlow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  personBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
-    maxWidth: '40%',
   },
-  personName: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-    fontSize: 13,
-    marginLeft: 6,
-  },
-  arrowContainer: {
+  partyBox: {
     alignItems: 'center',
-    paddingHorizontal: 4,
+    width: 90,
   },
-  owesLabel: {
-    color: colors.textMuted,
+  partyName: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  roleTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginTop: 4,
+  },
+  roleTagText: {
     fontSize: 10,
-    marginBottom: 2,
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
-  amountContainer: {
+  centerArrowCol: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  amountPill: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    justifyContent: 'center',
-    marginVertical: 4,
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorderGlow,
+    marginBottom: 6,
   },
   currencySymbol: {
     color: colors.primarySoft,
-    fontSize: 22,
+    fontSize: 14,
     fontWeight: '700',
     marginRight: 2,
   },
   amountText: {
     color: colors.white,
-    fontSize: 26,
+    fontSize: 18,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: -0.3,
+  },
+  arrowLineWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  dashLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.cardBorder,
   },
   footerRow: {
     flexDirection: 'row',
@@ -133,13 +164,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
     paddingTop: 12,
-    marginTop: 4,
+    marginTop: 10,
+  },
+  hintWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
   },
   hintText: {
     color: colors.textMuted,
     fontSize: 11,
-    flex: 1,
-    marginRight: 8,
+    fontWeight: '500',
   },
   payButton: {
     backgroundColor: colors.primary,
@@ -150,13 +186,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 3,
   },
   payButtonText: {
     color: colors.white,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
 });

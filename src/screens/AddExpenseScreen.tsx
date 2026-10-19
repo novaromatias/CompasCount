@@ -14,6 +14,7 @@ import { colors } from '../theme/colors';
 import { TricountGroup, SplitType, ExpensePayer, ExpenseSplit, Expense } from '../types';
 import { getGroupById, addExpenseToGroup, updateExpenseInGroup, deleteExpenseFromGroup } from '../services/storage';
 import { Header } from '../components/Header';
+import { Avatar } from '../components/Avatar';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AddExpenseScreenProps {
@@ -120,7 +121,7 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
     let payers: ExpensePayer[] = [];
     if (!isMultiplePayers) {
       if (!singlePayerId) {
-        setError('Selecciona quién pagó el gasto');
+        setError('Por favor selecciona quién pagó');
         return;
       }
       payers = [{ participantId: singlePayerId, amount: total }];
@@ -134,16 +135,16 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
         }
       }
       if (Math.abs(sumPaid - total) > 0.05) {
-        setError(`La suma de los pagos ($${sumPaid.toFixed(2)}) debe coincidir con el total ($${total.toFixed(2)})`);
+        setError(`La suma de lo pagado ($${sumPaid.toFixed(2)}) debe coincidir con el total ($${total.toFixed(2)})`);
         return;
       }
     }
 
-    // 2. Armar repartos (para quiénes es este concepto)
+    // 2. Armar división (splits)
     let splits: ExpenseSplit[] = [];
     if (splitType === 'EQUAL') {
       if (selectedBeneficiaries.length === 0) {
-        setError('Debes seleccionar al menos un participante para el reparto');
+        setError('Debes seleccionar al menos un participante para dividir el gasto');
         return;
       }
       const count = selectedBeneficiaries.length;
@@ -241,14 +242,14 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
       <Header
-        title={isEditing ? 'Editar Concepto' : 'Nuevo Gasto'}
-        subtitle={isEditing ? 'Modifica nombre, monto o participantes' : undefined}
+        title={isEditing ? 'Editar Gasto' : 'Nuevo Gasto'}
+        subtitle={isEditing ? 'Modifica concepto, monto o reparto' : undefined}
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
           isEditing ? (
             <TouchableOpacity onPress={handleDelete} style={styles.deleteHeaderBtn}>
-              <Ionicons name="trash-outline" size={20} color={colors.debtor} />
+              <Ionicons name="trash-outline" size={18} color={colors.debtor} />
             </TouchableOpacity>
           ) : undefined
         }
@@ -257,7 +258,8 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* 1. Nombre del Concepto y Monto Total */}
         <View style={styles.card}>
-          <Text style={styles.label}>Nombre del concepto *</Text>
+          <Text style={styles.cardSectionTitle}>¿Qué se pagó?</Text>
+          <Text style={styles.label}>Concepto del gasto *</Text>
           <TextInput
             style={styles.textInput}
             value={title}
@@ -265,7 +267,7 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
               setTitle(t);
               setError(null);
             }}
-            placeholder="Ej: Almuerzo, Supermercado, Nafta..."
+            placeholder="Ej: Pizza con amigos, Nafta, Supermercado..."
             placeholderTextColor={colors.textMuted}
           />
 
@@ -286,19 +288,20 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
           </View>
         </View>
 
-        {/* 2. Quién pagó (Participantes pagadores) */}
+        {/* 2. Quién pagó */}
         <View style={styles.card}>
           <View style={styles.sectionTitleRow}>
             <View>
-              <Text style={styles.sectionTitle}>¿Quién pagó el dinero?</Text>
-              <Text style={styles.sectionSubtitle}>Define quién o quiénes pusieron el dinero</Text>
+              <Text style={styles.cardSectionTitle}>¿Quién pagó?</Text>
+              <Text style={styles.sectionSubtitle}>Selecciona quién puso el dinero</Text>
             </View>
             <TouchableOpacity
               onPress={() => setIsMultiplePayers(!isMultiplePayers)}
               style={styles.toggleBtn}
+              activeOpacity={0.75}
             >
               <Text style={styles.toggleBtnText}>
-                {isMultiplePayers ? 'Un solo pagador' : 'Múltiples'}
+                {isMultiplePayers ? 'Un solo pagador' : 'Varios pagaron'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -312,13 +315,9 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
                     key={p.id}
                     style={[styles.chip, isSelected && styles.chipSelected]}
                     onPress={() => setSinglePayerId(p.id)}
+                    activeOpacity={0.8}
                   >
-                    <Ionicons
-                      name="person"
-                      size={14}
-                      color={isSelected ? colors.white : colors.textMuted}
-                      style={{ marginRight: 6 }}
-                    />
+                    <Avatar name={p.name} size="sm" />
                     <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                       {p.name}
                     </Text>
@@ -329,11 +328,14 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
           ) : (
             <View style={styles.multiPayersContainer}>
               <Text style={styles.hintSub}>
-                Ingresa cuánto pagó cada persona (la suma debe igualar el monto total):
+                Ingresa cuánto pagó cada compa:
               </Text>
               {group.participants.map((p) => (
                 <View key={p.id} style={styles.personInputRow}>
-                  <Text style={styles.personLabel}>{p.name}</Text>
+                  <View style={styles.personLabelWrap}>
+                    <Avatar name={p.name} size="sm" />
+                    <Text style={styles.personLabel}>{p.name}</Text>
+                  </View>
                   <View style={styles.miniInputWrapper}>
                     <Text style={styles.miniCurrency}>$</Text>
                     <TextInput
@@ -354,27 +356,29 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
           )}
         </View>
 
-        {/* 3. Para quién (Participantes del reparto) */}
+        {/* 3. Para quién (Reparto) */}
         <View style={styles.card}>
           <View style={styles.sectionTitleRow}>
             <View>
-              <Text style={styles.sectionTitle}>Participantes del concepto</Text>
-              <Text style={styles.sectionSubtitle}>¿Entre quiénes se divide este gasto?</Text>
+              <Text style={styles.cardSectionTitle}>¿Cómo se reparte?</Text>
+              <Text style={styles.sectionSubtitle}>¿Quiénes participan en este gasto?</Text>
             </View>
             <View style={styles.splitToggleRow}>
               <TouchableOpacity
                 style={[styles.modeBtn, splitType === 'EQUAL' && styles.modeBtnActive]}
                 onPress={() => setSplitType('EQUAL')}
+                activeOpacity={0.8}
               >
                 <Text
                   style={[styles.modeBtnText, splitType === 'EQUAL' && styles.modeBtnTextActive]}
                 >
-                  Partes iguales
+                  Iguales
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modeBtn, splitType === 'EXACT' && styles.modeBtnActive]}
                 onPress={() => setSplitType('EXACT')}
+                activeOpacity={0.8}
               >
                 <Text
                   style={[styles.modeBtnText, splitType === 'EXACT' && styles.modeBtnTextActive]}
@@ -388,7 +392,7 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
           {splitType === 'EQUAL' ? (
             <View>
               <Text style={styles.hintSub}>
-                Selecciona qué amigos participan en este gasto (toca para activar/desactivar):
+                Toca para incluir o excluir amigos del reparto:
               </Text>
               <View style={styles.chipsWrap}>
                 {group.participants.map((p) => {
@@ -398,16 +402,18 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
                       key={p.id}
                       style={[styles.chip, isChecked && styles.chipBeneficiarySelected]}
                       onPress={() => toggleBeneficiary(p.id)}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons
-                        name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={16}
-                        color={isChecked ? colors.white : colors.textMuted}
-                        style={{ marginRight: 6 }}
-                      />
+                      <Avatar name={p.name} size="sm" />
                       <Text style={[styles.chipText, isChecked && styles.chipTextSelected]}>
                         {p.name}
                       </Text>
+                      <Ionicons
+                        name={isChecked ? 'checkmark' : 'close'}
+                        size={14}
+                        color={isChecked ? colors.white : colors.textMuted}
+                        style={{ marginLeft: 4 }}
+                      />
                     </TouchableOpacity>
                   );
                 })}
@@ -416,11 +422,14 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
           ) : (
             <View style={styles.multiPayersContainer}>
               <Text style={styles.hintSub}>
-                Ingresa cuánto le corresponde pagar a cada uno de forma exacta:
+                Ingresa cuánto le corresponde pagar a cada uno:
               </Text>
               {group.participants.map((p) => (
                 <View key={p.id} style={styles.personInputRow}>
-                  <Text style={styles.personLabel}>{p.name}</Text>
+                  <View style={styles.personLabelWrap}>
+                    <Avatar name={p.name} size="sm" />
+                    <Text style={styles.personLabel}>{p.name}</Text>
+                  </View>
                   <View style={styles.miniInputWrapper}>
                     <Text style={styles.miniCurrency}>$</Text>
                     <TextInput
@@ -441,7 +450,12 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
           )}
         </View>
 
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {error && (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={16} color={colors.debtor} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         {/* Botón Guardar / Actualizar */}
         <TouchableOpacity
@@ -451,7 +465,7 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
           activeOpacity={0.85}
         >
           <Ionicons
-            name={isEditing ? 'save-outline' : 'checkmark-sharp'}
+            name={isEditing ? 'checkmark-circle' : 'add-circle'}
             size={20}
             color={colors.white}
             style={{ marginRight: 8 }}
@@ -469,8 +483,8 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({ route, navig
             disabled={loading}
             activeOpacity={0.8}
           >
-            <Ionicons name="trash-outline" size={18} color={colors.debtor} style={{ marginRight: 6 }} />
-            <Text style={styles.deleteButtonText}>Eliminar este concepto</Text>
+            <Ionicons name="trash-outline" size={16} color={colors.debtor} style={{ marginRight: 6 }} />
+            <Text style={styles.deleteButtonText}>Eliminar este gasto</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -489,16 +503,23 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
+  cardSectionTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
   label: {
     color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
+    marginTop: 8,
     marginBottom: 8,
   },
   textInput: {
@@ -507,7 +528,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     color: colors.white,
-    fontSize: 16,
+    fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -517,19 +538,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorderGlow,
     paddingHorizontal: 16,
   },
   currencyPrefix: {
     color: colors.primarySoft,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
     marginRight: 6,
   },
   amountInput: {
     flex: 1,
     color: colors.white,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
     paddingVertical: 10,
   },
@@ -539,11 +560,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  sectionTitle: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
   sectionSubtitle: {
     color: colors.textMuted,
     fontSize: 11,
@@ -551,13 +567,15 @@ const styles = StyleSheet.create({
   },
   toggleBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 12,
     backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   toggleBtnText: {
     color: colors.primarySoft,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   chipsWrap: {
@@ -568,16 +586,18 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
+    paddingLeft: 6,
+    paddingRight: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    gap: 6,
   },
   chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primarySoft,
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primary,
   },
   chipBeneficiarySelected: {
     backgroundColor: colors.primaryDark,
@@ -598,13 +618,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   multiPayersContainer: {
-    marginTop: 6,
+    marginTop: 4,
   },
   personInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 10,
+  },
+  personLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   personLabel: {
     color: colors.white,
@@ -615,7 +640,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     paddingHorizontal: 10,
@@ -632,17 +657,19 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
     fontWeight: '600',
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   splitToggleRow: {
     flexDirection: 'row',
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 3,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   modeBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 9,
   },
   modeBtnActive: {
@@ -657,22 +684,34 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '700',
   },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.debtorSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.debtor,
+    marginBottom: 16,
+    gap: 8,
+  },
   errorText: {
     color: colors.debtor,
     fontSize: 13,
-    marginBottom: 14,
-    textAlign: 'center',
+    fontWeight: '600',
+    flex: 1,
   },
   saveButton: {
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 15,
     borderRadius: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -685,11 +724,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 77, 109, 0.1)',
+    backgroundColor: colors.debtorSoft,
     borderWidth: 1,
-    borderColor: 'rgba(255, 77, 109, 0.3)',
+    borderColor: colors.debtor,
     marginTop: 14,
   },
   deleteButtonText: {
@@ -698,9 +737,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   deleteHeaderBtn: {
-    padding: 8,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   btnDisabled: {
     opacity: 0.6,

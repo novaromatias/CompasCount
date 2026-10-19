@@ -14,6 +14,7 @@ import {
 import { colors } from '../theme/colors';
 import { Participant } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from './Avatar';
 
 interface RegisterPaymentModalProps {
   visible: boolean;
@@ -81,11 +82,11 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
             >
               <View style={styles.header}>
                 <View style={styles.titleRow}>
-                  <Ionicons name="swap-horizontal" size={24} color={colors.primary} />
+                  <Ionicons name="swap-horizontal" size={22} color={colors.primary} />
                   <Text style={styles.title}>Registrar Pago Manual</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  <Ionicons name="close" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -98,12 +99,14 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
                     return (
                       <TouchableOpacity
                         key={p.id}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        style={[styles.chip, isSelected && styles.chipSelectedFrom]}
                         onPress={() => {
                           setFromId(p.id);
                           setError(null);
                         }}
+                        activeOpacity={0.8}
                       >
+                        <Avatar name={p.name} size="sm" />
                         <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                           {p.name}
                         </Text>
@@ -125,7 +128,9 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
                           setToId(p.id);
                           setError(null);
                         }}
+                        activeOpacity={0.8}
                       >
+                        <Avatar name={p.name} size="sm" />
                         <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                           {p.name}
                         </Text>
@@ -135,7 +140,7 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
                 </View>
 
                 {/* Monto */}
-                <Text style={styles.sectionLabel}>Monto pagado</Text>
+                <Text style={styles.sectionLabel}>Monto pagado ($)</Text>
                 <View style={styles.amountInputWrapper}>
                   <Text style={styles.currencyPrefix}>$</Text>
                   <TextInput
@@ -152,16 +157,21 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
                 </View>
 
                 {/* Concepto opcional */}
-                <Text style={styles.sectionLabel}>Nota / Concepto (opcional)</Text>
+                <Text style={styles.sectionLabel}>Nota o método (opcional)</Text>
                 <TextInput
                   style={styles.noteInput}
                   value={note}
                   onChangeText={setNote}
-                  placeholder="Ej: Pago en efectivo, Bizum, transferencia..."
+                  placeholder="Ej: Pago en efectivo, transferencia, etc."
                   placeholderTextColor={colors.textMuted}
                 />
 
-                {error && <Text style={styles.errorText}>{error}</Text>}
+                {error && (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="alert-circle" size={15} color={colors.debtor} />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
 
                 {/* Botones de acción */}
                 <View style={styles.actionsRow}>
@@ -195,14 +205,14 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 3, 10, 0.85)',
+    backgroundColor: 'rgba(9, 7, 15, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
   },
   modalContent: {
     backgroundColor: colors.card,
-    borderRadius: 24,
+    borderRadius: 22,
     padding: 22,
     width: '100%',
     maxWidth: 440,
@@ -214,17 +224,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   title: {
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
-    marginLeft: 8,
   },
   closeBtn: {
     padding: 4,
@@ -240,23 +250,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 6,
+    paddingRight: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    gap: 6,
   },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primarySoft,
+  chipSelectedFrom: {
+    backgroundColor: colors.debtorSoft,
+    borderColor: colors.debtor,
   },
   chipSelectedTo: {
-    backgroundColor: colors.creditor,
-    borderColor: '#73FFC4',
+    backgroundColor: colors.creditorSoft,
+    borderColor: colors.creditor,
   },
   chipText: {
     color: colors.textSecondary,
@@ -270,17 +284,18 @@ const styles = StyleSheet.create({
   amountInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 14,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: 14,
+    borderColor: colors.cardBorderGlow,
+    paddingHorizontal: 12,
+    marginBottom: 4,
   },
   currencyPrefix: {
     color: colors.primarySoft,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginRight: 6,
+    marginRight: 4,
   },
   amountInput: {
     flex: 1,
@@ -290,55 +305,64 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   noteInput: {
-    backgroundColor: colors.background,
-    borderRadius: 14,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     color: colors.white,
     fontSize: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
+    marginBottom: 6,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.debtorSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.debtor,
+    marginVertical: 10,
+    gap: 6,
   },
   errorText: {
     color: colors.debtor,
-    fontSize: 13,
-    marginTop: 10,
-    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    gap: 12,
+    gap: 10,
+    marginTop: 14,
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 14,
     backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   cancelBtnText: {
     color: colors.textSecondary,
-    fontWeight: '600',
     fontSize: 14,
+    fontWeight: '600',
   },
   saveBtn: {
-    flex: 1.5,
-    paddingVertical: 14,
+    flex: 1,
+    paddingVertical: 12,
     borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
   },
   saveBtnText: {
     color: colors.white,
+    fontSize: 14,
     fontWeight: '700',
-    fontSize: 15,
   },
   btnDisabled: {
     opacity: 0.6,

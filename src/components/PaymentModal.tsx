@@ -13,6 +13,7 @@ import {
 import { colors } from '../theme/colors';
 import { DebtSuggestion } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from './Avatar';
 
 interface PaymentModalProps {
   visible: boolean;
@@ -40,7 +41,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   useEffect(() => {
     if (suggestion) {
       setAmountStr(suggestion.amount.toString());
-      setNote(`Pago de deuda sugerida`);
+      setNote(`Pago de deuda saldada`);
       setError(null);
     }
   }, [suggestion]);
@@ -78,26 +79,30 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             >
               <View style={styles.header}>
                 <View style={styles.titleRow}>
-                  <Ionicons name="card-outline" size={24} color={colors.primary} />
+                  <Ionicons name="swap-horizontal" size={22} color={colors.primary} />
                   <Text style={styles.title}>Registrar Pago</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  <Ionicons name="close" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
-              {/* Transfer Details Card */}
+              {/* Transfer Details Card with Avatars */}
               <View style={styles.routeCard}>
                 <View style={styles.personCol}>
+                  <Avatar name={suggestion.fromName} size="md" />
                   <Text style={styles.roleLabel}>Paga</Text>
                   <Text style={styles.personName} numberOfLines={1}>
                     {suggestion.fromName}
                   </Text>
                 </View>
 
-                <Ionicons name="arrow-forward-circle" size={28} color={colors.primarySoft} />
+                <View style={styles.arrowCenter}>
+                  <Ionicons name="arrow-forward" size={22} color={colors.primarySoft} />
+                </View>
 
                 <View style={styles.personCol}>
+                  <Avatar name={suggestion.toName} size="md" />
                   <Text style={styles.roleLabel}>Recibe</Text>
                   <Text style={styles.personName} numberOfLines={1}>
                     {suggestion.toName}
@@ -108,8 +113,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {/* Editable Amount */}
               <View style={styles.fieldContainer}>
                 <View style={styles.labelRow}>
-                  <Text style={styles.label}>Monto sugerido (editable)</Text>
-                  <Text style={styles.subLabel}>Sugerido: ${suggestion.amount}</Text>
+                  <Text style={styles.label}>Monto a transferir ($)</Text>
+                  <Text style={styles.subLabel}>Sugerido: ${suggestion.amount.toFixed(2)}</Text>
                 </View>
                 <View style={styles.amountInputWrapper}>
                   <Text style={styles.currencyPrefix}>$</Text>
@@ -123,24 +128,28 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     keyboardType="numeric"
                     placeholder="0.00"
                     placeholderTextColor={colors.textMuted}
-                    autoFocus
                   />
                 </View>
               </View>
 
               {/* Note / Concept */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.label}>Concepto / Nota (opcional)</Text>
+                <Text style={styles.label}>Concepto / Método (opcional)</Text>
                 <TextInput
                   style={styles.noteInput}
                   value={note}
                   onChangeText={setNote}
-                  placeholder="Ej: Transferencia bancaria, efectivo, etc."
+                  placeholder="Ej: Transferencia bancaria, efectivo, MercadoPago"
                   placeholderTextColor={colors.textMuted}
                 />
               </View>
 
-              {error && <Text style={styles.errorText}>{error}</Text>}
+              {error && (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={15} color={colors.debtor} />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
 
               {/* Action Buttons */}
               <View style={styles.actionsRow}>
@@ -173,40 +182,35 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 3, 10, 0.85)',
+    backgroundColor: 'rgba(9, 7, 15, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
     backgroundColor: colors.card,
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 22,
+    padding: 22,
     width: '100%',
     maxWidth: 420,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   title: {
     color: colors.white,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    marginLeft: 10,
   },
   closeBtn: {
     padding: 4,
@@ -214,32 +218,37 @@ const styles = StyleSheet.create({
   routeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 16,
     padding: 14,
-    marginBottom: 20,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   personCol: {
-    flex: 1,
     alignItems: 'center',
+    flex: 1,
+  },
+  arrowCenter: {
+    paddingHorizontal: 8,
   },
   roleLabel: {
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: 10,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    fontWeight: '600',
-    marginBottom: 4,
+    marginTop: 6,
   },
   personName: {
     color: colors.white,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
   },
   fieldContainer: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   labelRow: {
     flexDirection: 'row',
@@ -249,87 +258,95 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
+    marginBottom: 6,
   },
   subLabel: {
     color: colors.primarySoft,
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   amountInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 14,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+    borderColor: colors.cardBorderGlow,
+    paddingHorizontal: 12,
   },
   currencyPrefix: {
     color: colors.primarySoft,
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    marginRight: 6,
+    marginRight: 4,
   },
   amountInput: {
     flex: 1,
     color: colors.white,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     paddingVertical: 10,
   },
   noteInput: {
-    backgroundColor: colors.background,
-    borderRadius: 14,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     color: colors.white,
     fontSize: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.debtorSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.debtor,
+    marginBottom: 14,
+    gap: 6,
   },
   errorText: {
     color: colors.debtor,
-    fontSize: 13,
-    marginBottom: 12,
-    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    gap: 12,
+    gap: 10,
+    marginTop: 6,
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 14,
     backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   cancelBtnText: {
     color: colors.textSecondary,
-    fontWeight: '600',
     fontSize: 14,
+    fontWeight: '600',
   },
   confirmBtn: {
-    flex: 1.5,
-    paddingVertical: 14,
+    flex: 1,
+    paddingVertical: 12,
     borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
   },
   confirmBtnText: {
     color: colors.white,
+    fontSize: 14,
     fontWeight: '700',
-    fontSize: 15,
   },
   btnDisabled: {
     opacity: 0.6,

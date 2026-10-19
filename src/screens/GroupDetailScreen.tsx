@@ -8,10 +8,9 @@ import {
   SafeAreaView,
   StatusBar,
   Share,
-  Alert,
 } from 'react-native';
 import { colors } from '../theme/colors';
-import { TricountGroup, DebtSuggestion, Expense } from '../types';
+import { TricountGroup, DebtSuggestion } from '../types';
 import { getGroupById, addPaymentToGroup } from '../services/storage';
 import { calculateGroupFinancials } from '../utils/debtSimplifier';
 import { Header } from '../components/Header';
@@ -70,7 +69,7 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
     if (!group) return;
     try {
       await Share.share({
-        message: `¡Únete a mi grupo de gastos "${group.title}" en CompasCount! Código de acceso: ${group.shareCode}`,
+        message: `¡Únete a mi grupo "${group.title}" en CompasCount! Código de acceso: ${group.shareCode}`,
       });
     } catch (err) {
       console.error(err);
@@ -83,7 +82,7 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
     setIsPaymentModalVisible(true);
   };
 
-  // Confirmar pago desde la sugerencia (monto sugerido o editado por el usuario)
+  // Confirmar pago desde la sugerencia
   const handleConfirmSuggestedPayment = async (
     fromId: string,
     toId: string,
@@ -101,7 +100,7 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
     await loadGroup();
   };
 
-  // Guardar pago manual general (quién pagó a quién libremente)
+  // Guardar pago manual general
   const handleSaveManualPayment = async (
     fromId: string,
     toId: string,
@@ -130,6 +129,11 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
     );
   }
 
+  const averagePerPerson =
+    group.participants.length > 0
+      ? financials.totalGroupSpending / group.participants.length
+      : 0;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
@@ -137,83 +141,98 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
       {/* Top Header */}
       <Header
         title={group.title}
-        subtitle={`${group.participants.length} participantes • Código: ${group.shareCode}`}
+        subtitle={`${group.participants.length} compas • Código: ${group.shareCode}`}
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={handleShare} style={styles.headerShareBtn}>
-            <Ionicons name="share-social" size={20} color={colors.primarySoft} />
+          <TouchableOpacity onPress={handleShare} style={styles.headerShareBtn} activeOpacity={0.75}>
+            <Ionicons name="share-social-outline" size={18} color={colors.primarySoft} />
           </TouchableOpacity>
         }
       />
 
-      {/* Navigation Tabs (Gastos, Equilibrios, Sugerencias de Pagos) */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'expenses' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('expenses')}
-        >
-          <Ionicons
-            name="receipt-outline"
-            size={18}
-            color={activeTab === 'expenses' ? colors.white : colors.textMuted}
-          />
-          <Text
-            style={[styles.tabButtonText, activeTab === 'expenses' && styles.tabButtonTextActive]}
+      {/* Segmented Capsule Tabs */}
+      <View style={styles.tabsOuter}>
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'expenses' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('expenses')}
+            activeOpacity={0.8}
           >
-            Gastos ({group.expenses.length})
-          </Text>
-        </TouchableOpacity>
+            <Ionicons
+              name={activeTab === 'expenses' ? 'receipt' : 'receipt-outline'}
+              size={15}
+              color={activeTab === 'expenses' ? colors.white : colors.textMuted}
+            />
+            <Text
+              style={[styles.tabButtonText, activeTab === 'expenses' && styles.tabButtonTextActive]}
+            >
+              Gastos ({group.expenses.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'balances' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('balances')}
-        >
-          <Ionicons
-            name="pie-chart-outline"
-            size={18}
-            color={activeTab === 'balances' ? colors.white : colors.textMuted}
-          />
-          <Text
-            style={[styles.tabButtonText, activeTab === 'balances' && styles.tabButtonTextActive]}
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'balances' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('balances')}
+            activeOpacity={0.8}
           >
-            Equilibrios
-          </Text>
-        </TouchableOpacity>
+            <Ionicons
+              name={activeTab === 'balances' ? 'pie-chart' : 'pie-chart-outline'}
+              size={15}
+              color={activeTab === 'balances' ? colors.white : colors.textMuted}
+            />
+            <Text
+              style={[styles.tabButtonText, activeTab === 'balances' && styles.tabButtonTextActive]}
+            >
+              Equilibrios
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'suggestions' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('suggestions')}
-        >
-          <Ionicons
-            name="swap-horizontal"
-            size={18}
-            color={activeTab === 'suggestions' ? colors.white : colors.textMuted}
-          />
-          <Text
-            style={[styles.tabButtonText, activeTab === 'suggestions' && styles.tabButtonTextActive]}
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'suggestions' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('suggestions')}
+            activeOpacity={0.8}
           >
-            Sugerencias ({financials.suggestions.length})
-          </Text>
-        </TouchableOpacity>
+            <Ionicons
+              name={activeTab === 'suggestions' ? 'swap-horizontal' : 'swap-horizontal-outline'}
+              size={15}
+              color={activeTab === 'suggestions' ? colors.white : colors.textMuted}
+            />
+            <Text
+              style={[styles.tabButtonText, activeTab === 'suggestions' && styles.tabButtonTextActive]}
+            >
+              Saldar ({financials.suggestions.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tab 1: Gastos */}
       {activeTab === 'expenses' && (
         <View style={styles.tabContent}>
-          {/* Total Group Spending Banner */}
-          <View style={styles.spendingBanner}>
-            <View>
-              <Text style={styles.spendingLabel}>Gasto Total Acumulado</Text>
-              <Text style={styles.spendingAmount}>
-                ${financials.totalGroupSpending.toLocaleString('es-AR', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </Text>
+          {/* Spending Ledger Card */}
+          <View style={styles.spendingCard}>
+            <View style={styles.spendingMain}>
+              <Text style={styles.spendingLabel}>Total Acumulado</Text>
+              <View style={styles.spendingAmountRow}>
+                <Text style={styles.currencyPrefix}>$</Text>
+                <Text style={styles.spendingAmount}>
+                  {financials.totalGroupSpending.toLocaleString('es-AR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </Text>
+              </View>
             </View>
-            <View style={styles.expenseCountBadge}>
-              <Text style={styles.expenseCountText}>
+
+            <View style={styles.spendingDetailsCol}>
+              <View style={styles.metricPill}>
+                <Ionicons name="person-outline" size={11} color={colors.textSecondary} />
+                <Text style={styles.metricPillText}>
+                  ~${averagePerPerson.toLocaleString('es-AR', { maximumFractionDigits: 0 })}/persona
+                </Text>
+              </View>
+              <Text style={styles.spendingSubInfo}>
                 {group.expenses.length} gastos • {group.payments.length} pagos
               </Text>
             </View>
@@ -237,10 +256,12 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
             contentContainerStyle={styles.listPadding}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="cart-outline" size={48} color={colors.textMuted} />
-                <Text style={styles.emptyTitle}>No hay gastos registrados</Text>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="receipt-outline" size={36} color={colors.primarySoft} />
+                </View>
+                <Text style={styles.emptyTitle}>Aún no hay gastos en este grupo</Text>
                 <Text style={styles.emptySubtitle}>
-                  Toca el botón "+" para registrar el primer gasto del grupo.
+                  Toca el botón "+ Agregar Gasto" para registrar la primera cuenta compartida.
                 </Text>
               </View>
             }
@@ -252,7 +273,7 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
             onPress={() => navigation.navigate('AddExpense', { groupId: group.id })}
             activeOpacity={0.85}
           >
-            <Ionicons name="add" size={26} color={colors.white} />
+            <Ionicons name="add" size={24} color={colors.white} />
             <Text style={styles.fabText}>Agregar Gasto</Text>
           </TouchableOpacity>
         </View>
@@ -267,9 +288,12 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
             renderItem={({ item }) => <BalanceCard balance={item} />}
             contentContainerStyle={styles.listPadding}
             ListHeaderComponent={
-              <Text style={styles.sectionHeaderTitle}>
-                Estado de cuentas por persona (verde = a favor, rojo = debe)
-              </Text>
+              <View style={styles.balancesHeaderInfo}>
+                <Ionicons name="information-circle-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionHeaderTitle}>
+                  Balance neto por persona (verde = a favor, rosa = debe)
+                </Text>
+              </View>
             }
           />
         </View>
@@ -283,7 +307,7 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
             <View style={{ flex: 1 }}>
               <Text style={styles.suggestionsTitle}>Cómo saldar las cuentas</Text>
               <Text style={styles.suggestionsSub}>
-                Mínimo número de transferencias calculadas
+                Mínimo de pagos calculado automáticamente
               </Text>
             </View>
 
@@ -292,7 +316,7 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
               onPress={() => setIsRegisterPaymentVisible(true)}
               activeOpacity={0.8}
             >
-              <Ionicons name="add-circle-outline" size={16} color={colors.primarySoft} />
+              <Ionicons name="add-circle" size={16} color={colors.primary} />
               <Text style={styles.generalPayBtnText}>Registrar Pago</Text>
             </TouchableOpacity>
           </View>
@@ -306,10 +330,12 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({ route, nav
             contentContainerStyle={styles.listPadding}
             ListEmptyComponent={
               <View style={styles.settledContainer}>
-                <Ionicons name="checkmark-done-circle" size={64} color={colors.creditor} />
-                <Text style={styles.settledTitle}>¡Cuentas al día!</Text>
+                <View style={styles.settledIconCircle}>
+                  <Ionicons name="checkmark-done" size={44} color={colors.creditor} />
+                </View>
+                <Text style={styles.settledTitle}>¡Cuentas equilibradas!</Text>
                 <Text style={styles.settledSubtitle}>
-                  No hay deudas pendientes entre los participantes. Todo está equilibrado.
+                  No hay deudas pendientes entre los participantes. Todo el grupo está al día.
                 </Text>
               </View>
             }
@@ -348,32 +374,46 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: colors.textSecondary,
-    fontSize: 16,
+    fontSize: 15,
   },
   headerShareBtn: {
-    padding: 8,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabsOuter: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
   },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    borderRadius: 14,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   tabButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingVertical: 8,
+    borderRadius: 11,
     gap: 6,
   },
   tabButtonActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.cardSecondary,
+    borderWidth: 1,
+    borderColor: colors.cardBorderGlow,
   },
   tabButtonText: {
     color: colors.textMuted,
@@ -387,7 +427,7 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
   },
-  spendingBanner: {
+  spendingCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -396,43 +436,77 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 6,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.cardBorderGlow,
   },
+  spendingMain: {
+    flex: 1,
+  },
   spendingLabel: {
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontSize: 11,
     textTransform: 'uppercase',
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  spendingAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 2,
+  },
+  currencyPrefix: {
+    color: colors.primarySoft,
+    fontSize: 16,
+    fontWeight: '700',
+    marginRight: 2,
   },
   spendingAmount: {
     color: colors.white,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
-    marginTop: 2,
+    letterSpacing: -0.5,
   },
-  expenseCountBadge: {
+  spendingDetailsCol: {
+    alignItems: 'flex-end',
+    gap: 5,
+  },
+  metricPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.card,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    gap: 4,
   },
-  expenseCountText: {
-    color: colors.primarySoft,
-    fontSize: 12,
+  metricPillText: {
+    color: colors.textSecondary,
+    fontSize: 11,
     fontWeight: '600',
+  },
+  spendingSubInfo: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '500',
   },
   listPadding: {
     padding: 16,
-    paddingBottom: 90,
+    paddingBottom: 95,
+  },
+  balancesHeaderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+    paddingHorizontal: 4,
   },
   sectionHeaderTitle: {
     color: colors.textSecondary,
     fontSize: 12,
-    marginBottom: 10,
+    fontWeight: '500',
   },
   suggestionsHeader: {
     flexDirection: 'row',
@@ -446,10 +520,11 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
   suggestionsSub: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 2,
   },
   generalPayBtn: {
@@ -457,14 +532,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.card,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.primaryGlow,
+    borderColor: colors.cardBorderGlow,
     gap: 6,
   },
   generalPayBtnText: {
-    color: colors.primarySoft,
+    color: colors.white,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -472,37 +547,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+  },
+  settledIconCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: colors.creditorSoft,
+    borderWidth: 1,
+    borderColor: colors.creditor,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   settledTitle: {
     color: colors.creditor,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
-    marginTop: 16,
+    letterSpacing: -0.3,
   },
   settledSubtitle: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 20,
+    marginTop: 6,
+    lineHeight: 18,
+    maxWidth: 270,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.cardSecondary,
+    borderWidth: 1,
+    borderColor: colors.cardBorderGlow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   emptyTitle: {
     color: colors.white,
     fontSize: 17,
     fontWeight: '700',
-    marginTop: 12,
   },
   emptySubtitle: {
     color: colors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
     marginTop: 6,
+    lineHeight: 18,
+    maxWidth: 270,
   },
   fab: {
     position: 'absolute',
@@ -512,11 +612,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 30,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 6,
     gap: 8,

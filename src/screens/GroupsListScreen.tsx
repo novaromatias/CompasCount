@@ -12,17 +12,20 @@ import {
 import { colors } from '../theme/colors';
 import { TricountGroup } from '../types';
 import { getStoredGroups } from '../services/storage';
-import { Header } from '../components/Header';
 import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from '../components/Avatar';
+import { useAuth } from '../context/AuthContext';
+import { LoginModal } from '../components/LoginModal';
 
 interface GroupsListScreenProps {
   navigation: any;
 }
 
 export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }) => {
+  const { user, isGuest } = useAuth();
   const [groups, setGroups] = useState<TricountGroup[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [isGuest, setIsGuest] = useState(true);
+  const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -49,6 +52,8 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
 
   const renderGroupItem = ({ item }: { item: TricountGroup }) => {
     const totalExpenses = item.expenses.reduce((acc, exp) => acc + exp.totalAmount, 0);
+    const visibleParticipants = item.participants.slice(0, 3);
+    const extraCount = item.participants.length - 3;
 
     return (
       <TouchableOpacity
@@ -56,8 +61,8 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
         onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, title: item.title })}
         activeOpacity={0.8}
       >
-        <View style={styles.groupTopRow}>
-          <View style={styles.groupTitleWrap}>
+        <View style={styles.cardHeader}>
+          <View style={styles.titleInfo}>
             <Text style={styles.groupTitle} numberOfLines={1}>
               {item.title}
             </Text>
@@ -69,21 +74,53 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
           </View>
 
           <View style={styles.codeTag}>
-            <Ionicons name="share-social-outline" size={12} color={colors.primarySoft} />
+            <Ionicons name="share-social-outline" size={13} color={colors.primarySoft} />
             <Text style={styles.codeText}>{item.shareCode}</Text>
           </View>
         </View>
 
-        <View style={styles.groupBottomRow}>
-          <View style={styles.participantsBadge}>
-            <Ionicons name="people-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.participantsText}>
-              {item.participants.length} participantes
+        <View style={styles.cardDivider} />
+
+        <View style={styles.cardFooter}>
+          {/* Overlapping Avatar Stack */}
+          <View style={styles.participantsSection}>
+            <View style={styles.avatarStack}>
+              {visibleParticipants.map((p, idx) => (
+                <View
+                  key={p.id}
+                  style={[
+                    styles.stackedAvatarWrap,
+                    { left: idx * 20, zIndex: 10 - idx },
+                  ]}
+                >
+                  <Avatar name={p.name} size="sm" showBorder />
+                </View>
+              ))}
+              {extraCount > 0 && (
+                <View
+                  style={[
+                    styles.extraBadge,
+                    { left: visibleParticipants.length * 20, zIndex: 5 },
+                  ]}
+                >
+                  <Text style={styles.extraBadgeText}>+{extraCount}</Text>
+                </View>
+              )}
+            </View>
+
+            <Text
+              style={[
+                styles.participantsCountLabel,
+                { marginLeft: (Math.min(item.participants.length, 3) + (extraCount > 0 ? 1 : 0)) * 20 + 10 },
+              ]}
+            >
+              {item.participants.length} compas
             </Text>
           </View>
 
-          <View style={styles.totalWrap}>
-            <Text style={styles.totalLabel}>Gasto total:</Text>
+          {/* Total Expense amount */}
+          <View style={styles.totalBlock}>
+            <Text style={styles.totalLabel}>Gasto total</Text>
             <Text style={styles.totalAmount}>
               ${totalExpenses.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
             </Text>
@@ -96,26 +133,33 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
-      
-      {/* Top App Header with User Mode */}
+
+      {/* Top App Bar */}
       <View style={styles.appHeader}>
-        <View style={styles.logoRow}>
-          <View style={styles.logoIcon}>
-            <Ionicons name="pie-chart" size={22} color={colors.primary} />
+        <View style={styles.brandRow}>
+          <View style={styles.brandIcon}>
+            <Ionicons name="pie-chart" size={20} color={colors.primary} />
           </View>
-          <Text style={styles.logoText}>CompasCount</Text>
+          <View>
+            <Text style={styles.brandName}>CompasCount</Text>
+            <Text style={styles.brandTagline}>Cuentas claras entre amigos</Text>
+          </View>
         </View>
 
-        <View style={styles.userBadge}>
+        <TouchableOpacity
+          style={styles.userBadge}
+          onPress={() => setIsLoginModalVisible(true)}
+          activeOpacity={0.7}
+        >
           <Ionicons
             name={isGuest ? 'person-circle-outline' : 'logo-google'}
-            size={18}
-            color={colors.primarySoft}
+            size={16}
+            color={isGuest ? colors.primarySoft : '#4285F4'}
           />
           <Text style={styles.userBadgeText}>
-            {isGuest ? 'Modo Invitado' : 'Conectado'}
+            {isGuest ? 'Invitado' : user?.name.split(' ')[0] || 'Conectado'}
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -132,14 +176,14 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
           />
         }
         ListHeaderComponent={
-          <View style={styles.banner}>
-            <View>
-              <Text style={styles.bannerTitle}>Tus Grupos de Gastos</Text>
-              <Text style={styles.bannerSubtitle}>
-                Divide cuentas con amigos, sin registrarte y 100% offline.
+          <View style={styles.heroCard}>
+            <View style={styles.heroLeft}>
+              <Text style={styles.heroTitle}>Tus grupos de gastos</Text>
+              <Text style={styles.heroSubtitle}>
+                {groups.length} {groups.length === 1 ? 'grupo activo' : 'grupos activos'} • 100% offline
               </Text>
             </View>
-            <View style={styles.offlinePill}>
+            <View style={styles.offlineStatusPill}>
               <View style={styles.offlineDot} />
               <Text style={styles.offlineText}>Listo offline</Text>
             </View>
@@ -147,24 +191,40 @@ export const GroupsListScreen: React.FC<GroupsListScreenProps> = ({ navigation }
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="wallet-outline" size={54} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Aún no tienes grupos</Text>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="people-outline" size={40} color={colors.primarySoft} />
+            </View>
+            <Text style={styles.emptyTitle}>Sin grupos creados aún</Text>
             <Text style={styles.emptySubtitle}>
-              Crea uno nuevo para tu próximo viaje, cena o gastos de casa.
+              Crea tu primer grupo para un viaje, cena, asado o los gastos de convivencia.
             </Text>
+            <TouchableOpacity
+              style={styles.emptyCtaBtn}
+              onPress={() => navigation.navigate('CreateGroup')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add" size={18} color={colors.white} style={{ marginRight: 6 }} />
+              <Text style={styles.emptyCtaText}>Crear mi primer grupo</Text>
+            </TouchableOpacity>
           </View>
         }
       />
 
-      {/* Floating Action Button: Crear Grupo */}
+      {/* Floating Action Button: Nuevo Grupo */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('CreateGroup')}
         activeOpacity={0.85}
       >
-        <Ionicons name="add" size={28} color={colors.white} />
+        <Ionicons name="add" size={24} color={colors.white} />
         <Text style={styles.fabText}>Nuevo Grupo</Text>
       </TouchableOpacity>
+
+      {/* Modal de Inicio / Gestión de Sesión */}
+      <LoginModal
+        visible={isLoginModalVisible}
+        onClose={() => setIsLoginModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -183,74 +243,83 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
-  logoRow: {
+  brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
-  logoIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  brandIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.primaryGlow,
+    borderColor: colors.cardBorderGlow,
   },
-  logoText: {
+  brandName: {
     color: colors.white,
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+  },
+  brandTagline: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '500',
   },
   userBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    gap: 6,
+    gap: 5,
   },
   userBadgeText: {
     color: colors.primarySoft,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   listContainer: {
     padding: 16,
-    paddingBottom: 90,
+    paddingBottom: 95,
   },
-  banner: {
+  heroCard: {
     backgroundColor: colors.cardSecondary,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 20,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.cardBorderGlow,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  bannerTitle: {
+  heroLeft: {
+    flex: 1,
+  },
+  heroTitle: {
     color: colors.white,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 4,
+    letterSpacing: -0.3,
   },
-  bannerSubtitle: {
+  heroSubtitle: {
     color: colors.textSecondary,
-    fontSize: 13,
-    maxWidth: 240,
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: '500',
   },
-  offlinePill: {
+  offlineStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(41, 204, 136, 0.15)',
-    paddingHorizontal: 8,
+    backgroundColor: colors.creditorSoft,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
@@ -271,23 +340,17 @@ const styles = StyleSheet.create({
   groupCard: {
     backgroundColor: colors.card,
     borderRadius: 18,
-    padding: 18,
+    padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  groupTopRow: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 14,
   },
-  groupTitleWrap: {
+  titleInfo: {
     flex: 1,
     marginRight: 10,
   },
@@ -295,7 +358,8 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 17,
     fontWeight: '700',
-    marginBottom: 4,
+    letterSpacing: -0.3,
+    marginBottom: 3,
   },
   groupDesc: {
     color: colors.textSecondary,
@@ -318,53 +382,113 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  groupBottomRow: {
+  cardDivider: {
+    height: 1,
+    backgroundColor: colors.cardBorder,
+    marginVertical: 12,
+  },
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: colors.cardBorder,
-    paddingTop: 12,
   },
-  participantsBadge: {
+  participantsSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    flex: 1,
+    position: 'relative',
+    height: 30,
   },
-  participantsText: {
+  avatarStack: {
+    position: 'absolute',
+    left: 0,
+    top: 2,
+    height: 26,
+  },
+  stackedAvatarWrap: {
+    position: 'absolute',
+    top: 0,
+  },
+  extraBadge: {
+    position: 'absolute',
+    top: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.cardSecondary,
+    borderWidth: 2,
+    borderColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  extraBadgeText: {
+    color: colors.primarySoft,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  participantsCountLabel: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '500',
   },
-  totalWrap: {
+  totalBlock: {
     alignItems: 'flex-end',
   },
   totalLabel: {
     color: colors.textMuted,
     fontSize: 10,
+    fontWeight: '600',
     textTransform: 'uppercase',
   },
   totalAmount: {
     color: colors.primarySoft,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: colors.cardSecondary,
+    borderWidth: 1,
+    borderColor: colors.cardBorderGlow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   emptyTitle: {
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
-    marginTop: 14,
   },
   emptySubtitle: {
     color: colors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
-    maxWidth: 260,
+    maxWidth: 280,
     marginTop: 6,
+    lineHeight: 18,
+  },
+  emptyCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    marginTop: 20,
+  },
+  emptyCtaText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
   },
   fab: {
     position: 'absolute',
@@ -374,11 +498,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 30,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 6,
     gap: 8,

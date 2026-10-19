@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
 import { Expense, Participant } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from './Avatar';
+import { getExpenseCategoryMeta } from '../utils/categoryIcons';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -11,61 +13,89 @@ interface ExpenseCardProps {
 }
 
 export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, participants, onPress }) => {
-  const getParticipantName = (id: string) => {
-    const p = participants.find((part) => part.id === id);
-    return p ? p.name : 'Alguien';
-  };
+  const getParticipant = (id: string) => participants.find((part) => part.id === id);
 
-  // Resumen de quién pagó
-  const payersSummary =
-    expense.payers.length === 1
-      ? `Pagó ${getParticipantName(expense.payers[0].participantId)}`
-      : `Pagaron ${expense.payers.length} personas`;
+  const mainPayer = expense.payers.length > 0 ? getParticipant(expense.payers[0].participantId) : null;
+  const isMultiPayer = expense.payers.length > 1;
 
-  // Resumen de para quiénes (participantes del concepto)
-  const splitsSummary =
+  const payerLabel = isMultiPayer
+    ? `${expense.payers.length} personas pagaron`
+    : `Pagó ${mainPayer?.name || 'Alguien'}`;
+
+  const splitsLabel =
     expense.splitType === 'EQUAL'
-      ? `${expense.splits.length} amigos incluidos`
-      : `${expense.splits.length} asignaciones exactas`;
+      ? `${expense.splits.length} amigos`
+      : `${expense.splits.length} asignaciones`;
 
-  // Formato de fecha
   const formattedDate = new Date(expense.expenseDate).toLocaleDateString('es-AR', {
     day: 'numeric',
     month: 'short',
   });
 
+  const categoryMeta = getExpenseCategoryMeta(expense.title);
+
+  const formattedAmount = expense.totalAmount.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
   const content = (
-    <>
-      <View style={styles.iconContainer}>
-        <Ionicons name="receipt-outline" size={22} color={colors.primarySoft} />
+    <View style={styles.cardInner}>
+      {/* Category Icon Badge */}
+      <View style={[styles.categoryIconWrap, { backgroundColor: categoryMeta.bg }]}>
+        <Ionicons name={categoryMeta.icon as any} size={20} color={categoryMeta.color} />
       </View>
 
-      <View style={styles.infoContainer}>
+      {/* Main Info */}
+      <View style={styles.infoCol}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>
             {expense.title}
           </Text>
-          <Ionicons name="pencil-sharp" size={12} color={colors.primarySoft} style={{ marginLeft: 6 }} />
         </View>
-        <Text style={styles.payers}>{payersSummary} • {splitsSummary}</Text>
-        <Text style={styles.date}>{formattedDate}</Text>
+
+        <View style={styles.metaRow}>
+          {mainPayer && !isMultiPayer ? (
+            <View style={styles.payerChip}>
+              <Avatar name={mainPayer.name} size="sm" />
+              <Text style={styles.payerText} numberOfLines={1}>
+                {mainPayer.name}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.payerChip}>
+              <Ionicons name="people" size={12} color={colors.primarySoft} />
+              <Text style={styles.payerText}>{payerLabel}</Text>
+            </View>
+          )}
+
+          <Text style={styles.dotSeparator}>•</Text>
+          <Text style={styles.dateText}>{formattedDate}</Text>
+        </View>
+
+        {/* Split info tag */}
+        <View style={styles.splitRow}>
+          <View style={styles.splitBadge}>
+            <Ionicons name="git-branch-outline" size={11} color={colors.textSecondary} />
+            <Text style={styles.splitBadgeText}>{splitsLabel}</Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.amountContainer}>
-        <Text style={styles.currency}>$</Text>
-        <Text style={styles.amount}>
-          {expense.totalAmount.toLocaleString('es-AR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </Text>
-        <View style={styles.splitBadge}>
-          <Text style={styles.splitBadgeText}>
-            {expense.splitType === 'EQUAL' ? 'Equitativo' : 'Exacto'}
-          </Text>
+      {/* Amount and Chevron */}
+      <View style={styles.amountCol}>
+        <View style={styles.amountWrap}>
+          <Text style={styles.currencySymbol}>$</Text>
+          <Text style={styles.amountValue}>{formattedAmount}</Text>
         </View>
+        {onPress && (
+          <View style={styles.editPill}>
+            <Text style={styles.editPillText}>Editar</Text>
+            <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+          </View>
+        )}
       </View>
-    </>
+    </View>
   );
 
   if (onPress) {
@@ -73,7 +103,7 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, participants,
       <TouchableOpacity
         style={styles.card}
         onPress={() => onPress(expense)}
-        activeOpacity={0.7}
+        activeOpacity={0.75}
       >
         {content}
       </TouchableOpacity>
@@ -85,8 +115,6 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, participants,
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: 16,
     padding: 14,
@@ -94,61 +122,107 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  iconContainer: {
+  cardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  infoContainer: {
+  infoCol: {
     flex: 1,
+    justifyContent: 'center',
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   title: {
-    color: colors.white,
-    fontSize: 15,
+    color: colors.textPrimary,
+    fontSize: 16,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
-  payers: {
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  payerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  payerText: {
     color: colors.textSecondary,
     fontSize: 12,
-    marginTop: 1,
+    fontWeight: '500',
   },
-  date: {
+  dotSeparator: {
     color: colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  amountContainer: {
-    alignItems: 'flex-end',
-  },
-  currency: {
-    color: colors.primarySoft,
     fontSize: 12,
-    fontWeight: '700',
   },
-  amount: {
-    color: colors.white,
-    fontSize: 17,
-    fontWeight: '800',
+  dateText: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  splitRow: {
+    flexDirection: 'row',
+    marginTop: 6,
   },
   splitBadge: {
-    marginTop: 4,
-    paddingHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: colors.backgroundSecondary,
+    gap: 4,
+    borderWidth: 0.5,
+    borderColor: colors.cardBorder,
   },
   splitBadgeText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  amountCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingLeft: 8,
+  },
+  amountWrap: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  currencySymbol: {
+    color: colors.primarySoft,
+    fontSize: 13,
+    fontWeight: '700',
+    marginRight: 2,
+  },
+  amountValue: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  editPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 4,
+  },
+  editPillText: {
     color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
   },
 });
